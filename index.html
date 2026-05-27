@@ -689,26 +689,26 @@ function renderKHCards(){
 function buildGHNMessage(c){
   const fromVal=document.getElementById('dateFrom').value;
   const toVal=document.getElementById('dateTo').value;
-  // Dùng min/max date thực tế của client, hoặc từ date range đã chọn
   const dateFrom=fmtDMY(c.minDate||fromVal);
   const dateTo=fmtDMY(c.maxDate||toVal);
   const shopLabel=c.shop?`${c.cid} - ${c.shop}`:c.cid;
+  const needCodes=c.needOrders.map(o=>o.code).join(', ');
   const deliveredCodes=c.deliveredOrders.map(o=>o.code).join(', ');
-
+  const needLine=needCodes?'\n'+needCodes:'';
+  const delivLine=deliveredCodes?'\n'+deliveredCodes:'';
   return `Kính gửi Quý khách hàng ${shopLabel},
 
 Với mục tiêu nâng cao tỷ lệ giao hàng thành công và tối ưu trải nghiệm Khách hàng, GHN xin gửi đến Quý Shop cập nhật về các đơn hàng trạng thái Chờ xác nhận giao lại đã được GHN chủ động liên hệ xác nhận tính từ ngày ${dateFrom} đến ngày ${dateTo}.
 
 Kết quả tổng số đơn đã liên hệ thành công là ${c.total}:
 - ${c.noneed} đơn hàng: Người nhận xác nhận không còn nhu cầu nhận hàng
-- ${c.needCount} đơn hàng: Người nhận xác nhận vẫn còn nhu cầu nhận hàng, GHN đã chủ động kích hoạt để giao lại.
+- ${c.needCount} đơn hàng: Người nhận xác nhận vẫn còn nhu cầu nhận hàng, GHN đã chủ động kích hoạt để giao lại.${needLine}
 Cụ thể:
-+ ${c.deliveredCount} đơn hàng: Đã được GHN giao lại thành công.${deliveredCodes?' ['+deliveredCodes+']':''}
++ ${c.deliveredCount} đơn hàng: Đã được GHN giao lại thành công.${delivLine}
 
 GHN sẽ tiếp tục theo dõi và cập nhật liên tục để hỗ trợ tối ưu tỷ lệ giao hàng thành công cho Quý Shop.
 Trân trọng.`;
 }
-
 async function regenMsg(i){
   const filtered=getFiltered();const c=filtered[i];if(!c)return;
   const el=document.getElementById('msg-'+i);
