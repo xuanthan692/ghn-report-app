@@ -480,9 +480,13 @@ function parseDate(raw){
 // ══ STATUS MAPPING (from actual GHN statuses) ══
 // Need column: "Nhu cần nhận hàng"
 function classifyNeed(val){
-  const v=String(val||'').toLowerCase();
-  if(v.includes('không còn nhu cầu')||v.includes('khong con nhu cau'))return'noneed';
-  if(v.includes('còn nhu cầu')||v.includes('con nhu cau')||v.includes('đã nhận')||v.includes('da nhan'))return'need';
+  const v=String(val||'').trim();
+  const vl=v.toLowerCase();
+  // BUG FIX: cannot check 'không còn nhu cầu' because it CONTAINS 'còn nhu cầu'
+  // Instead: check for the word 'không' (negation) which only appears in noneed rows
+  if(vl.includes('không')||vl.includes('khong'))return'noneed';
+  if(vl.includes('còn')||vl.includes('con nhu')||vl.includes('đã nhận'))return'need';
+  if(v.length>0)return'need';
   return'unknown';
 }
 // Status column: "Trạng thái đơn"
