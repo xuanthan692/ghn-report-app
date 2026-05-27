@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>GHN Report — Hệ thống báo cáo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#E31837;--red-dark:#c0102a;--red-soft:#fef2f2;
+  --dark:#1a1a2e;--navy:#16213e;--blue:#0f3460;
+  --bg:#f4f6f9;--white:#ffffff;--border:#e2e8f0;
+  --text:#1e293b;--muted:#64748b;--hint:#94a3b8;
+  --success:#10b981;--success-bg:#d1fae5;--success-text:#065f46;
+  --warn-bg:#fffbeb;--warn-border:#fde68a;--warn-text:#92400e;
+}
+html,body{height:100%;font-family:'Be Vietnam Pro','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+
+/* ── SCROLLBAR ─────────────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+
+/* ── LAYOUT ────────────────────────────────────── */
+#app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:240px;min-width:240px;background:linear-gradient(180deg,var(--dark) 0%,var(--navy) 100%);display:flex;flex-direction:column;transition:width 0.3s}
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:56px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:8px;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.content-wrap{flex:1;overflow-y:auto;padding:22px 24px}
+
+/* ── SIDEBAR ────────────────────────────────────── */
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:11px}
+.sb-logo-icon{width:36px;height:36px;background:var(--red);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-logo-title{color:#fff;font-weight:700;font-size:15px;line-height:1.2}
+.sb-logo-sub{color:#64748b;font-size:11px;margin-top:1px}
+.sb-nav{padding:14px 10px;flex:1}
+.sb-section{font-size:10px;color:#475569;font-weight:700;letter-spacing:1.2px;padding:0 6px;margin-bottom:6px;margin-top:10px}
+.sb-link{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:9px;color:#94a3b8;font-size:13.5px;font-weight:500;cursor:pointer;text-decoration:none;border:none;background:none;width:100%;transition:all 0.18s;margin-bottom:2px}
+.sb-link:hover{background:rgba(255,255,255,0.07);color:#e2e8f0}
+.sb-link.active{background:var(--red);color:#fff;box-shadow:0 2px 8px rgba(227,24,55,0.3)}
+.sb-link svg{width:16px;height:16px;flex-shrink:0}
+.sb-user{padding:12px 10px;border-top:1px solid rgba(255,255,255,0.08)}
+.sb-ucard{padding:10px 12px;background:rgba(255,255,255,0.06);border-radius:9px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.06)}
+.sb-uname{color:#e2e8f0;font-size:13px;font-weight:600}
+.sb-uemail{color:#64748b;font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-urole{margin-top:6px}
+
+/* ── BADGES ─────────────────────────────────────── */
+.badge{padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;display:inline-block}
+.badge-admin{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.badge-editor{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe}
+.badge-viewer{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+
+/* ── TOPBAR ─────────────────────────────────────── */
+.tb-breadcrumb{display:flex;align-items:center;gap:6px;flex:1}
+.tb-home{color:var(--hint);font-size:13px;cursor:pointer}
+.tb-sep{color:var(--border);font-size:13px}
+.tb-page{font-weight:700;color:var(--text);font-size:15px}
+
+/* ── CARDS ───────────────────────────────────────── */
+.card{background:var(--white);border-radius:12px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+
+/* ── BUTTONS ─────────────────────────────────────── */
+.btn{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.18s;border:none;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.btn-primary{background:var(--red);color:#fff}
+.btn-primary:hover{background:var(--red-dark);transform:translateY(-1px);box-shadow:0 4px 12px rgba(227,24,55,0.3)}
+.btn-primary:disabled{background:#94a3b8;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg);color:var(--text)}
+.btn-danger{background:transparent;color:#dc2626;border:1px solid #fecaca;padding:5px 10px;font-size:12px}
+.btn-danger:hover{background:#fef2f2}
+.btn-sm{padding:5px 12px;font-size:12px}
+
+/* ── INPUTS ──────────────────────────────────────── */
+.input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:9px;font-size:14px;outline:none;font-family:inherit;color:var(--text);transition:border 0.2s;background:var(--white)}
+.input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(227,24,55,0.1)}
+select.input{cursor:pointer}
+
+/* ── STAT CARDS ──────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
+.stat-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.stat-label{color:var(--muted);font-size:12px;font-weight:500}
+.stat-val{font-size:22px;font-weight:700;color:var(--text);margin-top:4px}
+
+/* ── TABLE ───────────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{padding:10px 14px;text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);background:#f8fafc;white-space:nowrap}
+.tbl td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#475569;vertical-align:middle}
+.tbl tbody tr:hover td{background:#fafafa}
+.tbl .num{text-align:right}
+
+/* ── ALERTS ───────────────────────────────────────── */
+.alert{padding:10px 14px;border-radius:9px;font-size:13px;margin-bottom:14px}
+.alert-err{background:#fef2f2;border:1px solid #fecaca;color:#dc2626}
+.alert-ok{background:var(--success-bg);border:1px solid #a7f3d0;color:var(--success-text)}
+.alert-warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn-text)}
+
+/* ── DROP ZONE ───────────────────────────────────── */
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:44px 24px;text-align:center;cursor:pointer;transition:all 0.2s;user-select:none}
+.drop-zone:hover,.drop-zone.over{border-color:var(--red);background:var(--red-soft)}
+
+/* ── SPINNER ─────────────────────────────────────── */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 0.8s linear infinite;display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%}
+
+/* ── FADE IN ─────────────────────────────────────── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade{animation:fadeIn 0.25s ease}
+
+/* ── LOGIN PAGE ──────────────────────────────────── */
+#loginPage{position:fixed;inset:0;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);display:flex;align-items:center;justify-content:center;z-index:1000}
+.login-box{width:100%;max-width:420px;padding:0 24px}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-pill{display:inline-flex;align-items:center;gap:12px;background:rgba(255,255,255,0.09);padding:11px 22px;border-radius:50px;border:1px solid rgba(255,255,255,0.14);margin-bottom:14px}
+.login-pill span{color:#fff;font-weight:700;font-size:18px;letter-spacing:0.5px}
+.login-h1{color:#fff;font-size:26px;font-weight:700}
+.login-sub{color:#94a3b8;margin-top:7px;font-size:14px}
+.login-card{background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:32px}
+.login-label{display:block;color:#cbd5e1;font-size:13px;font-weight:500;margin-bottom:6px}
+.login-input{width:100%;padding:12px 14px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:9px;color:#fff;font-size:14px;outline:none;font-family:inherit;transition:border 0.2s}
+.login-input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(227,24,55,0.2)}
+.login-input::placeholder{color:#475569}
+.login-hint{text-align:center;margin-top:18px;color:#475569;font-size:12px}
+.login-footer{text-align:center;margin-top:20px;color:#334155;font-size:11px}
+
+/* ── REPORT LAYOUT ────────────────────────────────── */
+.rpt-wrap{display:flex;gap:16px;height:calc(100vh - 148px);min-height:400px}
+.rpt-list{width:240px;flex-shrink:0;border-radius:12px;border:1px solid var(--border);background:var(--white);display:flex;flex-direction:column;overflow:hidden}
+.rpt-list-head{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.rpt-list-body{overflow-y:auto;flex:1}
+.rpt-item{padding:11px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;border-left:3px solid transparent;transition:all 0.12s}
+.rpt-item.active{background:var(--red-soft);border-left-color:var(--red)}
+.rpt-item:hover:not(.active){background:#fafafa}
+.rpt-fname{font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rpt-meta{font-size:10px;color:var(--hint);margin-top:2px}
+.rpt-detail{flex:1;display:flex;flex-direction:column;gap:12px;overflow:hidden;min-width:0}
+.rpt-topbar{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.rpt-summary{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:14px 18px;flex-shrink:0}
+.rpt-table-wrap{flex:1;background:var(--white);border-radius:12px;border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sheet-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 14px;flex-shrink:0}
+.sheet-tab{padding:9px 14px;font-size:12px;font-weight:500;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);transition:all 0.15s;font-family:inherit}
+.sheet-tab.active{border-bottom-color:var(--red);color:var(--red)}
+
+/* ── USERS ────────────────────────────────────────── */
+.users-legend{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:12px 18px;margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+
+/* ── MODALS ────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px}
+.modal-box{background:var(--white);border-radius:16px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px}
+
+/* ── EMPTY STATE ──────────────────────────────────── */
+.empty{text-align:center;padding:48px 24px;color:var(--hint)}
+.empty-icon{font-size:44px;margin-bottom:12px}
+.empty-msg{font-size:14px}
+
+/* ── QUICK ACTIONS ────────────────────────────────── */
+.quick-bar{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:12px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* ── COPY TOAST ───────────────────────────────────── */
+#toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all 0.3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1;transform:translateY(0)}
+
+/* ── AI SUMMARY STYLING ─────────────────────────── */
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(90deg,#7c3aed,#E31837);color:#fff;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:8px}
+.sum-pre{font-size:12.5px;color:#334155;white-space:pre-wrap;font-family:inherit;line-height:1.75;max-height:120px;overflow-y:auto}
+
+/* ── RESPONSIVE ────────────────────────────────────── */
+@media(max-width:900px){
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .sidebar{width:56px}
+  .sb-link span,.sb-logo-title,.sb-logo-sub,.sb-ucard{display:none}
+  .sb-link{justify-content:center;padding:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast">✅ Đã copy vào clipboard!</div>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage">
+  <div class="login-box fade">
+    <div class="login-logo">
+      <div class="login-pill">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect width="26" height="26" rx="7" fill="#E31837"/><path d="M6 13h14M13 6l7 7-7 7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>GHN Report</span>
+      </div>
+      <div class="login-h1">Đăng nhập hệ thống</div>
+      <div class="login-sub">Nhập email GHN được Admin cấp quyền</div>
+    </div>
+    <div class="login-card">
+      <div id="loginErr" class="alert alert-err" style="display:none"></div>
+      <div style="margin-bottom:16px">
+        <label class="login-label">Email GHN</label>
+        <input id="loginEmail" class="login-input" type="email" placeholder="yourname@ghn.vn" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px" onclick="doLogin()" id="loginBtn">
+        Đăng nhập →
+      </button>
+      <div class="login-hint">Lần đầu? Email bất kỳ sẽ được tạo tài khoản Admin tự động.</div>
+    </div>
+    <div class="login-footer">© 2025 Giao Hàng Nhanh — Internal System</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M10 4l6 6-6 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div><div class="sb-logo-title">GHN Report</div><div class="sb-logo-sub">Hệ thống báo cáo</div></div>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-section">MENU</div>
+      <a class="sb-link" id="nav-dashboard" onclick="goto('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Tổng quan</span>
+      </a>
+      <a class="sb-link sb-import" id="nav-import" onclick="goto('import')" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Import Excel</span>
+      </a>
+      <a class="sb-link" id="nav-report" onclick="goto('report')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span>Báo cáo</span>
+      </a>
+      <a class="sb-link sb-admin" id="nav-users" onclick="goto('users')" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Phân quyền</span>
+      </a>
+    </div>
+    <div class="sb-user">
+      <div class="sb-ucard">
+        <div class="sb-uname" id="sidebarName">...</div>
+        <div class="sb-uemail" id="sidebarEmail">...</div>
+        <div class="sb-urole" id="sidebarRole"></div>
+      </div>
+      <button class="sb-link" onclick="doLogout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:16px;height:16px"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Đăng xuất</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-area">
+    <div class="topbar">
+      <div class="tb-breadcrumb">
+        <span class="tb-home" onclick="goto('dashboard')">🏠</span>
+        <span class="tb-sep">/</span>
+        <span class="tb-page" id="tbTitle">Tổng quan</span>
+      </div>
+      <div id="tbRight" style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)">
+        <span id="tbDate"></span>
+      </div>
+    </div>
+    <div class="content-wrap">
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="fade">
+        <div style="margin-bottom:22px">
+          <h1 style="font-size:22px;font-weight:700;color:var(--text)">Xin chào, <span id="dashName">bạn</span> 👋</h1>
+          <p style="color:var(--muted);margin-top:4px;font-size:13px" id="dashDate"></p>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div><div class="stat-label">Tổng báo cáo</div><div class="stat-val" id="st-total">0</div></div><div class="stat-icon" style="background:#3b82f615">📋</div></div>
+          <div class="stat-card"><div><div class="stat-label">Hôm nay</div><div class="stat-val" id="st-today">0</div></div><div class="stat-icon" style="background:#10b98115">📅</div></div>
+          <div class="stat-card"><div><div class="stat-label">Tổng dòng dữ liệu</div><div class="stat-val" id="st-rows">0</div></div><div class="stat-icon" style="background:#f59e0b15">📊</div></div>
+          <div class="stat-card"><div><div class="stat-label">Quyền của bạn</div><div class="stat-val" style="font-size:14px;margin-top:6px" id="st-role">—</div></div><div class="stat-icon" style="background:#E3183715">🔐</div></div>
+        </div>
+        <div class="quick-bar sb-import" style="display:none" id="quickBar">
+          <span style="color:var(--muted);font-size:13px">⚡ Thao tác nhanh:</span>
+          <button class="btn btn-primary btn-sm" onclick="goto('import')">📥 Import Excel mới</button>
+          <button class="btn btn-ghost btn-sm" onclick="goto('report')">📊 Xem báo cáo</button>
+        </div>
+        <div class="card" style="padding:20px">
+          <h2 style="font-size:14px;font-weight:700;margin-bottom:16px">📋 Báo cáo gần đây</h2>
+          <div id="recentTable"><div class="empty"><div class="empty-icon">📂</div><div class="empty-msg">Chưa có báo cáo</div></div></div>
+        </div>
+      </div>
+
+      <!-- IMPORT -->
+      <div id="page-import" style="display:none" class="fade">
+        <div style="margin-bottom:22px">
+          <h1 style="font-size:22px;font-weight:700">📥 Import File Excel</h1>
+          <p style="color:var(--muted);margin-top:4px;font-size:13px">Tải lên file báo cáo hàng ngày (.xlsx, .xls, .csv)</p>
+        </div>
+        <div style="max-width:620px">
+          <div class="card" style="padding:24px;margin-bottom:16px" id="importCard">
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">
+              <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="fileChosen(this.files[0])"/>
+              <div id="dzContent">
+                <div style="font-size:44px;margin-bottom:12px">☁️</div>
+                <div style="font-weight:600;color:#475569;font-size:15px">Kéo & thả file vào đây</div>
+                <div style="color:var(--hint);font-size:13px;margin-top:4px">hoặc click để chọn file</div>
+                <div style="display:flex;gap:6px;justify-content:center;margin-top:12px">
+                  <span style="padding:2px 10px;background:var(--bg);border-radius:20px;font-size:11px;color:var(--muted)">.xlsx</span>
+                  <span style="padding:2px 10px;background:var(--bg);border-radius:20px;font-size:11px;color:var(--muted)">.xls</span>
+                  <span style="padding:2px 10px;background:var(--bg);border-radius:20px;font-size:11px;color:var(--muted)">.csv</span>
+                </div>
+              </div>
+            </div>
+            <div id="importErr" class="alert alert-err" style="display:none;margin-top:14px"></div>
+            <div id="importActions" style="display:none;margin-top:14px;display:none">
+              <div id="chosenInfo" style="margin-bottom:12px;padding:10px 14px;background:var(--bg);border-radius:9px;font-size:13px;color:var(--muted)"></div>
+              <div style="display:flex;gap:10px">
+                <button class="btn btn-primary" onclick="doUpload()" id="uploadBtn" style="flex:1;justify-content:center">🚀 Upload & Phân tích</button>
+                <button class="btn btn-ghost" onclick="resetImport()">Hủy</button>
+              </div>
+            </div>
+          </div>
+          <!-- Result -->
+          <div id="importResult" class="card fade" style="display:none;padding:24px;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <div style="width:36px;height:36px;background:var(--success-bg);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">✅</div>
+              <div><div style="font-weight:700;color:var(--success-text)">Upload thành công!</div><div id="importTime" style="font-size:12px;color:var(--muted);margin-top:2px"></div></div>
+            </div>
+            <div id="importMeta" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px"></div>
+            <div style="background:var(--bg);border-radius:9px;padding:14px;margin-bottom:16px">
+              <div class="ai-badge">✨ AI Summary</div>
+              <pre id="importSummary" class="sum-pre"></pre>
+            </div>
+            <div style="display:flex;gap:10px">
+              <button class="btn btn-primary" id="viewReportBtn">📊 Xem báo cáo chi tiết →</button>
+              <button class="btn btn-ghost" onclick="resetImport()">📥 Import file khác</button>
+            </div>
+          </div>
+          <div class="alert alert-warn">
+            <strong>💡 Hướng dẫn:</strong><br>
+            File Excel nên có hàng đầu tiên là tiêu đề cột · Hỗ trợ nhiều sheets · AI tự động tóm tắt dữ liệu · Dữ liệu lưu trữ trong trình duyệt
+          </div>
+        </div>
+      </div>
+
+      <!-- REPORT -->
+      <div id="page-report" style="display:none" class="fade">
+        <div style="margin-bottom:18px">
+          <h1 style="font-size:22px;font-weight:700">📊 Báo cáo Excel</h1>
+          <p style="color:var(--muted);margin-top:4px;font-size:13px">Xem, phân tích và tạo nội dung gửi khách hàng</p>
+        </div>
+        <div class="rpt-wrap">
+          <div class="rpt-list">
+            <div class="rpt-list-head">
+              <div style="font-weight:700;font-size:13px">📋 Danh sách</div>
+              <div style="font-size:11px;color:var(--hint);margin-top:2px" id="rptCount">0 file</div>
+            </div>
+            <div class="rpt-list-body" id="rptListBody">
+              <div class="empty" style="padding:24px"><div class="empty-icon" style="font-size:28px">📂</div><div class="empty-msg" style="font-size:12px">Chưa có báo cáo</div></div>
+            </div>
+          </div>
+          <div class="rpt-detail" id="rptDetail">
+            <div class="card" style="flex:1;display:flex;align-items:center;justify-content:center">
+              <div class="empty"><div class="empty-icon">📊</div><div class="empty-msg">Chọn báo cáo để xem chi tiết</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div id="page-users" style="display:none" class="fade">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div><h1 style="font-size:22px;font-weight:700">👥 Quản lý phân quyền</h1><p style="color:var(--muted);margin-top:4px;font-size:13px">Cấp và quản lý quyền truy cập theo email</p></div>
+          <button class="btn btn-primary" onclick="showAddUser()">➕ Thêm user</button>
+        </div>
+        <div id="userMsg" style="display:none" class="alert"></div>
+        <div class="users-legend">
+          <div style="display:flex;align-items:center;gap:7px"><span class="badge badge-admin">Admin</span><span style="font-size:12px;color:var(--muted)">Toàn quyền + quản lý user</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><span class="badge badge-editor">Editor</span><span style="font-size:12px;color:var(--muted)">Import Excel + xem báo cáo</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><span class="badge badge-viewer">Viewer</span><span style="font-size:12px;color:var(--muted)">Chỉ xem báo cáo</span></div>
+        </div>
+        <div class="card" style="overflow:hidden">
+          <div style="padding:12px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:13px" id="userTableHead">Danh sách người dùng</div>
+          <div style="overflow-x:auto"><table class="tbl" id="userTable"><thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày thêm</th><th>Thao tác</th></tr></thead><tbody id="userTableBody"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div id="addUserModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeAddUser()">
+  <div class="modal-box fade">
+    <div class="modal-title">➕ Thêm người dùng mới</div>
+    <div id="addUserErr" class="alert alert-err" style="display:none"></div>
+    <div style="display:grid;gap:14px;margin-bottom:20px">
+      <div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:5px">Email GHN *</label><input id="addEmail" class="input" placeholder="name@ghn.vn" type="email"/></div>
+      <div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:5px">Họ tên *</label><input id="addName" class="input" placeholder="Nguyễn Văn A"/></div>
+      <div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:5px">Vai trò *</label>
+        <select id="addRole" class="input">
+          <option value="VIEWER">Viewer — Chỉ xem báo cáo</option>
+          <option value="EDITOR">Editor — Import + xem báo cáo</option>
+          <option value="ADMIN">Admin — Toàn quyền</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="doAddUser()" id="addUserBtn" style="flex:1;justify-content:center">💾 Lưu</button>
+      <button class="btn btn-ghost" onclick="closeAddUser()">Hủy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// STORAGE (IndexedDB-like via localStorage sim)
+// ══════════════════════════════════════════════
+const DB = {
+  get(k){try{return JSON.parse(localStorage.getItem('ghn_'+k)||'null')}catch{return null}},
+  set(k,v){localStorage.setItem('ghn_'+k,JSON.stringify(v))},
+  del(k){localStorage.removeItem('ghn_'+k)}
+};
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let currentUser = null;
+let reports = [];
+let users = [];
+let selectedReport = null;
+let activeSheet = '';
+let chosenFile = null;
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+function init(){
+  const session = DB.get('session');
+  if(session){
+    currentUser = session;
+    reports = DB.get('reports')||[];
+    users = DB.get('users')||[];
+    if(users.length===0){
+      users=[{id:uid(),email:session.email,name:session.name,role:'ADMIN',active:true,createdAt:new Date().toISOString()}];
+      DB.set('users',users);
+    }
+    showApp();
+    goto('dashboard');
+  }
+  document.getElementById('tbDate').textContent = new Date().toLocaleDateString('vi-VN',{weekday:'short',year:'numeric',month:'long',day:'numeric'});
+}
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  if(!email){showLoginErr('Vui lòng nhập email');return}
+  if(!email.includes('@')){showLoginErr('Email không hợp lệ');return}
+  const btnEl = document.getElementById('loginBtn');
+  btnEl.innerHTML='<span class="spin"></span> Đang xác thực...';
+  btnEl.disabled=true;
+  setTimeout(()=>{
+    users = DB.get('users')||[];
+    let user = users.find(u=>u.email===email);
+    if(!user){
+      // Auto-create admin if first login ever
+      const isFirst = users.length===0;
+      user = {id:uid(),email,name:emailToName(email),role:isFirst?'ADMIN':'VIEWER',active:true,createdAt:new Date().toISOString()};
+      if(isFirst){
+        users=[user];
+      } else {
+        // Check if allowed
+        showLoginErr('Email này chưa được cấp quyền. Liên hệ Admin để được thêm vào hệ thống.');
+        btnEl.innerHTML='Đăng nhập →';btnEl.disabled=false;
+        return;
+      }
+      DB.set('users',users);
+    }
+    if(!user.active){showLoginErr('Tài khoản này đã bị vô hiệu hóa.');btnEl.innerHTML='Đăng nhập →';btnEl.disabled=false;return}
+    currentUser={...user};
+    DB.set('session',currentUser);
+    reports = DB.get('reports')||[];
+    document.getElementById('loginPage').style.display='none';
+    showApp();
+    goto('dashboard');
+  },600);
+}
+
+function showLoginErr(msg){
+  const el=document.getElementById('loginErr');
+  el.textContent='⚠️ '+msg;el.style.display='block';
+  const btn=document.getElementById('loginBtn');
+  btn.innerHTML='Đăng nhập →';btn.disabled=false;
+}
+
+function doLogout(){
+  DB.del('session');currentUser=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginPage').style.display='flex';
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginErr').style.display='none';
+  document.getElementById('loginBtn').innerHTML='Đăng nhập →';
+  document.getElementById('loginBtn').disabled=false;
+}
+
+function showApp(){
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('sidebarName').textContent=currentUser.name;
+  document.getElementById('sidebarEmail').textContent=currentUser.email;
+  document.getElementById('sidebarRole').innerHTML=roleBadge(currentUser.role);
+  document.getElementById('dashName').textContent=currentUser.name.split(' ').pop()||currentUser.name;
+  document.getElementById('dashDate').textContent=new Date().toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  // Show/hide nav items by role
+  const isAdmin=currentUser.role==='ADMIN';
+  const canEdit=isAdmin||currentUser.role==='EDITOR';
+  document.querySelectorAll('.sb-admin').forEach(el=>el.style.display=isAdmin?'flex':'none');
+  document.querySelectorAll('.sb-import').forEach(el=>el.style.display=canEdit?'flex':'none');
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+const PAGES=['dashboard','import','report','users'];
+function goto(page){
+  PAGES.forEach(p=>{
+    const el=document.getElementById('page-'+p);
+    if(el)el.style.display=p===page?'block':'none';
+    const nav=document.getElementById('nav-'+p);
+    if(nav)nav.classList.toggle('active',p===page);
+  });
+  const titles={dashboard:'Tổng quan',import:'Import Excel',report:'Báo cáo Excel',users:'Quản lý phân quyền'};
+  document.getElementById('tbTitle').textContent=titles[page]||page;
+  if(page==='dashboard')renderDashboard();
+  if(page==='report')renderReportPage();
+  if(page==='users')renderUsersPage();
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════
+function renderDashboard(){
+  reports=DB.get('reports')||[];
+  const today=new Date().toDateString();
+  document.getElementById('st-total').textContent=reports.length;
+  document.getElementById('st-today').textContent=reports.filter(r=>new Date(r.uploadedAt).toDateString()===today).length;
+  document.getElementById('st-rows').textContent=reports.reduce((a,r)=>a+r.rowCount,0).toLocaleString();
+  document.getElementById('st-role').innerHTML=roleBadge(currentUser.role);
+  const qb=document.getElementById('quickBar');
+  const canEdit=currentUser.role==='ADMIN'||currentUser.role==='EDITOR';
+  if(qb)qb.style.display=canEdit?'flex':'none';
+  const wrap=document.getElementById('recentTable');
+  if(!reports.length){wrap.innerHTML='<div class="empty"><div class="empty-icon">📂</div><div class="empty-msg">Chưa có báo cáo nào. Hãy import file Excel đầu tiên!</div></div>';return}
+  wrap.innerHTML=`<div style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Tên file</th><th>Sheets</th><th>Dòng</th><th>Người upload</th><th>Thời gian</th><th></th></tr></thead>
+    <tbody>${reports.slice(0,10).map(r=>`<tr>
+      <td><span style="color:var(--success)">📄</span> ${esc(r.fileName)}</td>
+      <td>${esc(r.sheets.join(', '))}</td>
+      <td class="num">${r.rowCount.toLocaleString()}</td>
+      <td>${esc(r.uploadedBy)}</td>
+      <td style="color:var(--hint);font-size:12px;white-space:nowrap">${fmtDate(r.uploadedAt)}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="gotoReport('${r.id}')">Xem →</button></td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+// ══════════════════════════════════════════════
+// IMPORT
+// ══════════════════════════════════════════════
+function dzOver(e){e.preventDefault();document.getElementById('dropZone').classList.add('over')}
+function dzLeave(){document.getElementById('dropZone').classList.remove('over')}
+function dzDrop(e){e.preventDefault();dzLeave();const f=e.dataTransfer.files[0];if(f)fileChosen(f)}
+function fileChosen(f){
+  if(!f)return;
+  chosenFile=f;
+  document.getElementById('dzContent').innerHTML=`<div style="font-size:38px;margin-bottom:10px">📄</div><div style="font-weight:600;color:var(--text)">${esc(f.name)}</div><div style="color:var(--muted);font-size:13px;margin-top:4px">${(f.size/1024).toFixed(1)} KB</div><div style="color:var(--red);font-size:12px;margin-top:6px">Click để đổi file</div>`;
+  document.getElementById('importActions').style.display='block';
+  document.getElementById('importErr').style.display='none';
+  document.getElementById('importResult').style.display='none';
+}
+function resetImport(){
+  chosenFile=null;
+  document.getElementById('dzContent').innerHTML=`<div style="font-size:44px;margin-bottom:12px">☁️</div><div style="font-weight:600;color:#475569;font-size:15px">Kéo & thả file vào đây</div><div style="color:var(--hint);font-size:13px;margin-top:4px">hoặc click để chọn file</div><div style="display:flex;gap:6px;justify-content:center;margin-top:12px"><span style="padding:2px 10px;background:var(--bg);border-radius:20px;font-size:11px;color:var(--muted)">.xlsx</span><span style="padding:2px 10px;background:var(--bg);border-radius:20px;font-size:11px;color:var(--muted)">.xls</span><span style="padding:2px 10px;background:var(--bg);border-radius:20px;font-size:11px;color:var(--muted)">.csv</span></div>`;
+  document.getElementById('importActions').style.display='none';
+  document.getElementById('importErr').style.display='none';
+  document.getElementById('importResult').style.display='none';
+  document.getElementById('fileInput').value='';
+  document.getElementById('dropZone').classList.remove('over');
+}
+
+async function doUpload(){
+  if(!chosenFile)return;
+  const btn=document.getElementById('uploadBtn');
+  btn.innerHTML='<span class="spin"></span> Đang xử lý...';btn.disabled=true;
+  try{
+    const buf=await chosenFile.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const sheets=wb.SheetNames;
+    const data={};let totalRows=0;
+    for(const sh of sheets){
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sh],{defval:''});
+      data[sh]=rows;totalRows+=rows.length;
+    }
+    const summary=buildSummary(sheets,data,totalRows);
+    // Try AI summary
+    let aiSummary=summary;
+    try{
+      const sample={};
+      for(const sh of sheets.slice(0,2)){
+        const rows=data[sh];
+        const cols=rows.length>0?Object.keys(rows[0]):[];
+        const preview=rows.slice(0,5);
+        sample[sh]={cols,rows:preview,total:rows.length};
+      }
+      const aiResp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:600,
+          system:'Bạn là trợ lý phân tích dữ liệu GHN. Phân tích file Excel và trả lời ngắn gọn bằng tiếng Việt, sử dụng emoji phù hợp.',
+          messages:[{role:'user',content:`Phân tích tóm tắt file Excel "${chosenFile.name}":\n${JSON.stringify(sample,null,2)}\n\nTổng ${totalRows} dòng, ${sheets.length} sheets. Tóm tắt 3-5 điểm quan trọng nhất (cấu trúc dữ liệu, nội dung chính, điểm đáng chú ý). Ngắn gọn, súc tích.`}]
+        })
+      });
+      if(aiResp.ok){const d=await aiResp.json();aiSummary=d.content[0]?.text||summary}
+    }catch(e){}
+
+    const report={id:uid(),fileName:chosenFile.name,uploadedBy:currentUser.name,uploadedAt:new Date().toISOString(),rowCount:totalRows,sheets,data,summary:aiSummary};
+    reports=DB.get('reports')||[];
+    reports=[report,...reports].slice(0,50);
+    DB.set('reports',reports);
+    selectedReport=report;
+
+    document.getElementById('importCard').querySelector('.drop-zone').style.display='none';
+    document.getElementById('importActions').style.display='none';
+    document.getElementById('importTime').textContent=fmtDate(report.uploadedAt);
+    document.getElementById('importMeta').innerHTML=[
+      {l:'Tên file',v:report.fileName},
+      {l:'Sheets',v:sheets.join(', ')},
+      {l:'Tổng dòng',v:totalRows.toLocaleString()}
+    ].map(s=>`<div style="background:var(--bg);padding:12px;border-radius:9px"><div style="font-size:11px;color:var(--hint);font-weight:600">${s.l}</div><div style="font-weight:600;color:var(--text);margin-top:3px;font-size:13px">${esc(s.v)}</div></div>`).join('');
+    document.getElementById('importSummary').textContent=aiSummary;
+    document.getElementById('viewReportBtn').onclick=()=>gotoReport(report.id);
+    document.getElementById('importResult').style.display='block';
+    document.getElementById('importCard').querySelector('.drop-zone').style.display='none';
+  }catch(e){
+    document.getElementById('importErr').textContent='⚠️ Lỗi xử lý file: '+e.message;
+    document.getElementById('importErr').style.display='block';
+  }finally{btn.innerHTML='🚀 Upload & Phân tích';btn.disabled=false}
+}
+
+function buildSummary(sheets,data,totalRows){
+  const lines=[`📊 File có ${sheets.length} sheet, tổng ${totalRows} dòng dữ liệu.`];
+  for(const sh of sheets){
+    const rows=data[sh];if(!rows.length)continue;
+    const cols=Object.keys(rows[0]);
+    lines.push(`\n📋 Sheet: "${sh}" — ${rows.length} dòng, ${cols.length} cột`);
+    lines.push(`   Cột: ${cols.slice(0,8).join(', ')}${cols.length>8?` ... (+${cols.length-8})`:''}`)
+    const numStats=getNumStats(rows,cols);
+    if(numStats.length){lines.push(`   📈 Thống kê:`);numStats.slice(0,4).forEach(s=>lines.push(`      • ${s.col}: Tổng=${fmtNum(s.sum)}, TB=${fmtNum(s.avg)}, Max=${fmtNum(s.max)}, Min=${fmtNum(s.min)}`))}
+  }
+  return lines.join('\n');
+}
+function getNumStats(rows,cols){
+  const s=[];
+  for(const c of cols){const ns=rows.map(r=>parseFloat(String(r[c]))).filter(n=>!isNaN(n)&&isFinite(n));if(ns.length>rows.length*0.5){const sum=ns.reduce((a,b)=>a+b,0);s.push({col:c,sum,avg:sum/ns.length,max:Math.max(...ns),min:Math.min(...ns)})}}
+  return s;
+}
+function fmtNum(n){if(Math.abs(n)>=1e6)return(n/1e6).toFixed(2)+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';return n.toFixed(2)}
+
+// ══════════════════════════════════════════════
+// REPORT
+// ══════════════════════════════════════════════
+function renderReportPage(){
+  reports=DB.get('reports')||[];
+  document.getElementById('rptCount').textContent=reports.length+' file';
+  const body=document.getElementById('rptListBody');
+  if(!reports.length){body.innerHTML='<div class="empty" style="padding:24px"><div class="empty-icon" style="font-size:28px">📂</div><div class="empty-msg" style="font-size:12px">Chưa có báo cáo</div></div>';return}
+  body.innerHTML=reports.map(r=>`<div class="rpt-item${selectedReport?.id===r.id?' active':''}" onclick="selectReport('${r.id}')">
+    <div class="rpt-fname">📄 ${esc(r.fileName)}</div>
+    <div class="rpt-meta">${fmtDate(r.uploadedAt)}</div>
+    <div class="rpt-meta">${r.rowCount.toLocaleString()} dòng</div>
+  </div>`).join('');
+  if(selectedReport)renderReportDetail(selectedReport);
+  else{document.getElementById('rptDetail').innerHTML='<div class="card" style="flex:1;display:flex;align-items:center;justify-content:center;min-height:300px"><div class="empty"><div class="empty-icon">📊</div><div class="empty-msg">Chọn báo cáo để xem chi tiết</div></div></div>'}
+}
+
+function selectReport(id){
+  reports=DB.get('reports')||[];
+  selectedReport=reports.find(r=>r.id===id)||null;
+  activeSheet=selectedReport?.sheets[0]||'';
+  renderReportPage();
+}
+
+function gotoReport(id){
+  reports=DB.get('reports')||[];
+  selectedReport=reports.find(r=>r.id===id)||null;
+  activeSheet=selectedReport?.sheets[0]||'';
+  goto('report');
+}
+
+function renderReportDetail(r){
+  const isAdmin=currentUser.role==='ADMIN';
+  const tableData=(r.data[activeSheet]||[]);
+  const cols=tableData.length?Object.keys(tableData[0]):[];
+  document.getElementById('rptDetail').innerHTML=`
+    <div class="rpt-topbar">
+      <div>
+        <div style="font-weight:700;color:var(--text);font-size:14px">📄 ${esc(r.fileName)}</div>
+        <div style="font-size:11px;color:var(--hint);margin-top:2px">${esc(r.uploadedBy)} · ${fmtDate(r.uploadedAt)} · ${r.rowCount.toLocaleString()} dòng</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="copyReport('${r.id}')">📋 Copy gửi KH</button>
+        ${isAdmin?`<button class="btn btn-danger" onclick="deleteReport('${r.id}')">🗑️</button>`:''}
+      </div>
+    </div>
+    <div class="rpt-summary">
+      <div class="ai-badge">✨ AI Summary</div>
+      <pre class="sum-pre">${esc(r.summary)}</pre>
+    </div>
+    <div class="rpt-table-wrap">
+      <div class="sheet-tabs">${r.sheets.map(sh=>`<button class="sheet-tab${sh===activeSheet?' active':''}" onclick="switchSheet('${r.id}','${esc(sh)}')">${esc(sh)}</button>`).join('')}</div>
+      <div style="overflow:auto;flex:1">
+        ${tableData.length===0?'<div class="empty"><div class="empty-icon" style="font-size:28px">📄</div><div class="empty-msg">Sheet trống</div></div>':
+        `<table class="tbl" style="font-size:12px">
+          <thead><tr><th style="width:36px;color:var(--hint)">#</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+          <tbody>${tableData.slice(0,200).map((row,i)=>`<tr style="background:${i%2===0?'#fff':'#fafafa'}">
+            <td style="color:var(--hint);text-align:center">${i+1}</td>
+            ${cols.map(c=>`<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(String(row[c]??''))}">${esc(String(row[c]??''))}</td>`).join('')}
+          </tr>`).join('')}</tbody>
+        </table>
+        ${tableData.length>200?`<div style="padding:8px;text-align:center;color:var(--hint);font-size:11px;border-top:1px solid var(--border)">Hiển thị 200/${tableData.length} dòng</div>`:''}`}
+      </div>
+    </div>`;
+}
+
+function switchSheet(rId,sh){activeSheet=sh;selectReport(rId)}
+
+function copyReport(id){
+  const r=reports.find(x=>x.id===id);if(!r)return;
+  const txt=`📊 BÁO CÁO: ${r.fileName}\n📅 Ngày: ${fmtDate(r.uploadedAt)}\n👤 Upload bởi: ${r.uploadedBy}\n\n${r.summary}`;
+  navigator.clipboard.writeText(txt).then(()=>showToast('✅ Đã copy vào clipboard!')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('✅ Đã copy!');
+  });
+}
+
+function deleteReport(id){
+  if(!confirm('Xóa báo cáo này? Không thể khôi phục.'))return;
+  reports=reports.filter(r=>r.id!==id);DB.set('reports',reports);
+  if(selectedReport?.id===id){selectedReport=null;activeSheet=''}
+  renderReportPage();
+}
+
+// ══════════════════════════════════════════════
+// USERS
+// ══════════════════════════════════════════════
+function renderUsersPage(){
+  users=DB.get('users')||[];
+  document.getElementById('userTableHead').textContent=`Danh sách người dùng (${users.length})`;
+  const body=document.getElementById('userTableBody');
+  const OWNER_EMAIL=users.find(u=>u.role==='ADMIN')?.email||'';
+  body.innerHTML=users.map(u=>`<tr>
+    <td style="font-weight:500">${esc(u.name)}${u.email===currentUser.email?'<span style="margin-left:6px;font-size:9px;background:#E31837;color:white;padding:1px 5px;border-radius:8px">TÔI</span>':''}</td>
+    <td style="color:var(--muted);font-size:12px">${esc(u.email)}</td>
+    <td>${u.email===currentUser.email?roleBadge(u.role):`<select style="font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-family:inherit" onchange="changeRole('${u.id}',this.value)"><option value="VIEWER"${u.role==='VIEWER'?' selected':''}>Viewer</option><option value="EDITOR"${u.role==='EDITOR'?' selected':''}>Editor</option><option value="ADMIN"${u.role==='ADMIN'?' selected':''}>Admin</option></select>`}</td>
+    <td>${u.email===currentUser.email?`<span style="color:var(--success);font-size:12px">● Hoạt động</span>`:`<button onclick="toggleActive('${u.id}')" style="font-size:11px;padding:3px 10px;border-radius:20px;cursor:pointer;border:none;background:${u.active?'#d1fae5':'#fee2e2'};color:${u.active?'#065f46':'#dc2626'}">${u.active?'● Hoạt động':'○ Vô hiệu'}</button>`}</td>
+    <td style="color:var(--hint);font-size:12px">${new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
+    <td>${u.email!==currentUser.email?`<button class="btn btn-danger btn-sm" onclick="removeUser('${u.id}')">🗑️ Xóa</button>`:''}</td>
+  </tr>`).join('');
+}
+
+function showAddUser(){document.getElementById('addUserModal').style.display='flex';document.getElementById('addEmail').value='';document.getElementById('addName').value='';document.getElementById('addRole').value='VIEWER';document.getElementById('addUserErr').style.display='none'}
+function closeAddUser(){document.getElementById('addUserModal').style.display='none'}
+
+function doAddUser(){
+  const email=document.getElementById('addEmail').value.trim().toLowerCase();
+  const name=document.getElementById('addName').value.trim();
+  const role=document.getElementById('addRole').value;
+  if(!email||!name){document.getElementById('addUserErr').textContent='Vui lòng điền đầy đủ thông tin';document.getElementById('addUserErr').style.display='block';return}
+  if(!email.includes('@')){document.getElementById('addUserErr').textContent='Email không hợp lệ';document.getElementById('addUserErr').style.display='block';return}
+  users=DB.get('users')||[];
+  if(users.find(u=>u.email===email)){document.getElementById('addUserErr').textContent='Email này đã tồn tại trong hệ thống';document.getElementById('addUserErr').style.display='block';return}
+  users.push({id:uid(),email,name,role,active:true,createdAt:new Date().toISOString()});
+  DB.set('users',users);
+  closeAddUser();
+  showUserMsg('✅ Đã thêm '+name+' ('+email+') thành công!','ok');
+  renderUsersPage();
+}
+
+function changeRole(id,role){
+  users=DB.get('users')||[];
+  const u=users.find(x=>x.id===id);if(!u)return;
+  if(u.email===currentUser.email){showUserMsg('❌ Không thể đổi quyền của chính mình','err');renderUsersPage();return}
+  u.role=role;DB.set('users',users);
+  showUserMsg('✅ Đã cập nhật quyền '+u.name+' → '+role,'ok');
+}
+
+function toggleActive(id){
+  users=DB.get('users')||[];
+  const u=users.find(x=>x.id===id);if(!u)return;
+  u.active=!u.active;DB.set('users',users);
+  renderUsersPage();
+}
+
+function removeUser(id){
+  users=DB.get('users')||[];
+  const u=users.find(x=>x.id===id);if(!u)return;
+  if(!confirm(`Xóa người dùng ${u.email}?`))return;
+  users=users.filter(x=>x.id!==id);DB.set('users',users);
+  showUserMsg('Đã xóa '+u.email,'ok');
+  renderUsersPage();
+}
+
+function showUserMsg(msg,type){
+  const el=document.getElementById('userMsg');
+  el.textContent=msg;el.className='alert '+(type==='ok'?'alert-ok':'alert-err');el.style.display='block';
+  setTimeout(()=>el.style.display='none',3500);
+}
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)}
+function esc(s){const d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML}
+function fmtDate(iso){try{return new Date(iso).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}catch{return iso}}
+function emailToName(email){const local=email.split('@')[0];return local.split(/[._-]/).map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(' ')}
+function roleBadge(r){const m={ADMIN:'badge-admin',EDITOR:'badge-editor',VIEWER:'badge-viewer'};return`<span class="badge ${m[r]||'badge-viewer'}">${r}</span>`}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+
+// ══════════════════════════════════════════════
+// START
+// ══════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
